@@ -122,6 +122,67 @@ switch (true) {
                     ]);
                 }
 
+                $goals = [
+                    'home' => 0,
+                    'away' => 0
+                ];
+
+                foreach ($matchData['Goals'] as $goal) {
+                    if ($goal['ScoreTeam1'] > $goals['home']) {
+                        $scoreTeamId  = $match['home_team_id'];
+                        $playerTeamId = $goal['IsOwnGoal'] ? $match['away_team_id'] : $match['home_team_id'];
+                        $goals['home']++;
+                    } else {
+                        $scoreTeamId  = $match['away_team_id'];
+                        $playerTeamId = $goal['IsOwnGoal'] ? $match['home_team_id'] : $match['away_team_id'];
+                        $goals['away']++;
+                    }
+
+                    $playerName = explode(' ', str_replace(['.', ','], ['. ', ', '], trim($goal['GoalGetterName'])));
+
+                    if (count($playerName) == 1) {
+                        $firstname = '';
+                        $lastname  = trim($playerName[0]);
+                    } else {
+                        if (strpos($playerName[0], ',') === false) {
+                            $firstname = substr(trim($playerName[0]), 0, 1);
+                            unset($playerName[0]);
+
+                            $lastname  = trim(implode(' ', $playerName));
+                        } else {
+                            $firstname = substr(trim($playerName[1]), 0, 1);
+                            $lastname  = str_replace(',', '', trim($playerName[0]));
+                        }
+                    }
+
+                    $playerId = $db->upsert('player', [
+                        'lastname'  => ucfirst($lastname),
+                        'firstname' => ucfirst($firstname)
+                    ], [
+                        'lastname' => $lastname
+                    ]);
+
+                    $teamPlayer = [
+                        'player_id' => $playerId,
+                        'team_id'   => $playerTeamId,
+                        'league_id' => $league['id'],
+                        'season_id' => $season['id']
+                    ];
+
+                    $teamPlayerId = $db->upsert('team_player', $teamPlayer, $teamPlayer);
+
+                    $goal = [
+                        'match_id'       => $matchId,
+                        'team_player_id' => $teamPlayerId,
+                        'minute'         => $goal['MatchMinute'],
+                        'team_id'        => $scoreTeamId,
+                        'own_goal'       => $goal['IsOwnGoal'] ? 1 : 0,
+                        'penalty'        => $goal['IsPenalty'] ? 1 : 0
+                    ];
+
+                    $goalId = $db->upsert('goal', $goal, $goal);
+                }
+
                 if ($status == 'finished' && $matchdayStatus == 'not_started') {
                     $matchdayStatus = 'finished';
                 }

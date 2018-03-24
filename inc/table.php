@@ -8,6 +8,7 @@ class Table {
 
     protected $_teams;
     protected $_results;
+    protected $_player;
 
     protected $_table;
 
@@ -21,18 +22,19 @@ class Table {
     }
 
     public function getRawGameData() {
-        $matchData = [];
+        $matchData     = [];
+        $this->_player = new Player($this->_leagueCode, $this->_seasonCode);
 
         foreach ($this->getResults() as $matchday => $results) {
-            $table = $this->get($matchday - 1);
+            $table   = $this->get($matchday - 1);
+            $players = $this->_player->getMaxStreakTopScorers($matchday - 1, 1, 5);
 
             foreach ($results as $result) {
-                $data = $this->getMatchRawData($table, $matchday, $result['home_team_id'], $result['away_team_id']);
+                $data = $this->getMatchRawData($table, $matchday, $result['home_team_id'], $result['away_team_id'], $players);
 
                 $matchData[] = array_merge(array_values($data),
                 [
-                    (int)$result['home_score'],
-                    (int)$result['away_score']
+                    ($result['home_score'] - $result['away_score'])
                 ]);
             }
         }
@@ -40,7 +42,7 @@ class Table {
         return $matchData;
     }
 
-    public function getMatchRawData($table, $matchday, $homeId, $awayId) {
+    public function getMatchRawData($table, $matchday, $homeId, $awayId, $players) {
         $data     = [];
         $position = false;
 
@@ -49,10 +51,20 @@ class Table {
                       ? (int)$this->getTeamPosition($teamId, $table)
                       : $position - (int)$this->getTeamPosition($teamId, $table);
 
-            $teamData = $table[$teamId];
-            $data[$teamId . '_mgs'] = (int)round($teamData['games'] ? $teamData['goals_scored'] / $teamData['games'] : 0);
-            $data[$teamId . '_mgt'] = (int)round($teamData['games'] ? $teamData['goals_taken'] / $teamData['games'] : 0);
-            $data[$teamId . '_str'] = (int)$this->getWonGames($teamId, $matchday - 1, 5);
+            $topscorer = isset($players[$teamId]) ? $players[$teamId] : [];
+            $teamData  = $table[$teamId];
+
+            $data[$teamId . '_mgw'] = $teamData['games'] ? $teamData['won'] / $teamData['games'] : 0;
+            $data[$teamId . '_mgd'] = $teamData['games'] ? $teamData['draw'] / $teamData['games'] : 0;
+            $data[$teamId . '_mgl'] = $teamData['games'] ? $teamData['lost'] / $teamData['games'] : 0;
+
+            $data[$teamId . '_mgs'] = $teamData['games'] ? $teamData['goals_scored'] / $teamData['games'] : 0;
+            $data[$teamId . '_mgt'] = $teamData['games'] ? $teamData['goals_taken'] / $teamData['games'] : 0;
+            $data[$teamId . '_ppg'] = $teamData['games'] ? $teamData['points'] / $teamData['games'] : 0;
+            $data[$teamId . '_str'] = (int)$this->getWonGames($teamId, $matchday - 1, 10);
+
+            $data[$teamId . '_tsg'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'goals')) / $teamData['games'] : 0;
+            $data[$teamId . '_tss'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'streak')) / $teamData['games']: 0;
         }
 
         $data['pos_diff'] = $position;

@@ -15,35 +15,32 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.naive_bayes import GaussianNB
 from sklearn.svm import SVC
 
-names = ['hmgs', 'hmgt', 'hstr','amgs', 'amgt', 'astr', 'posdiff', 'md', 'resh', 'resa']
+names = ['hmgw', 'hmgd', 'hmgl', 'hmgs', 'hmgt', 'hstr', 'hppg', 'htsg', 'htss', 'amgw', 'amgd', 'amgl', 'amgs', 'amgt', 'astr', 'appg', 'atsg', 'atss', 'posdiff', 'md', 'res']
 
 dataset = pandas.read_csv('data.csv', names=names)
 data_array = dataset.values
 
-input = data_array[:,0:7]
-homegoals = data_array[:,8]
-awaygoals = data_array[:,9]
+input = data_array[:,0:19]
+goals = data_array[:,20]
 
 seed = 7
 validation_size = 0.2
-input_train, input_validation, home_train, home_validation = model_selection.train_test_split(input, homegoals, test_size=validation_size, random_state=seed)
-input_train, input_validation, away_train, away_validation = model_selection.train_test_split(input, awaygoals, test_size=validation_size, random_state=seed)
+scoring = 'accuracy'
+input_train, input_validation, train, validation = model_selection.train_test_split(input, goals, test_size=validation_size, random_state=seed)
 
 
 
-homelda = LinearDiscriminantAnalysis()
-homelda.fit(input_train, home_train)
-awaylda = LinearDiscriminantAnalysis()
-awaylda.fit(input_train, away_train)
+
+lda = LinearDiscriminantAnalysis()
+lda.fit(input_train, train)
 
 bet_dataset = pandas.read_csv('validation.csv', names=names)
 bet_array = bet_dataset.values
-data = bet_array[:,0:7]
+data = bet_array[:,0:19]
 
-homebets = homelda.predict(data);
-awaybets = awaylda.predict(data);
+bets = lda.predict(data);
 
 
-results = numpy.column_stack((homebets, awaybets))
+results = numpy.column_stack((bets))
 
-numpy.savetxt("results.csv", results.astype(int), fmt='%i', delimiter=",")
+numpy.savetxt("results.txt", results.astype(int), fmt='%i', delimiter=",")

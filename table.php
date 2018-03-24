@@ -9,11 +9,19 @@ $maxmatchDay   = isset($options['m']) ? $options['m'] : null;
 $tablePosDif   = isset($options['t']) ? $options['t'] : 3;
 $tableDistance = isset($options['d']) ? $options['d'] : 5;
 
-$table = new Table('bl1', $seasonCode);
+$table  = new Table('bl1', $seasonCode);
+$player = new Player('bl1', $seasonCode);
 
 //var_dump($table->getRawGameData());
 
+/**
+ * Default Table Current Matchday
+ */
 Render::table($table->get());
+
+foreach ($player->getMaxStreakTopScorers($maxmatchDay) as $players) {
+    Render::table($players);
+}
 
 /**
  * points
