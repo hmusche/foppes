@@ -7,7 +7,7 @@ class Db {
     protected $_config = [
         'pdn'  => 'mysql:dbname=foppes;host=127.0.0.1;charset=utf8',
         'user' => 'foppes',
-        'pass' => 'ClVEewp3L3jjyARw'
+        'pass' => 'ClVEewp3L3jjyARw' // yeah, yeah, I know, it's my local machine, alright?
     ];
 
     private function __construct() {
