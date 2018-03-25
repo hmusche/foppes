@@ -2,15 +2,16 @@
 
 require_once "inc/init.php";
 
-$options = getopt('s:m:t:d:');
+$options = getopt('s:l:m:t:d:');
 
 $seasonCode    = isset($options['s']) ? $options['s'] : '2017';
+$leagueCode    = isset($options['l']) ? $options['l'] : 'bl1';
 $maxmatchDay   = isset($options['m']) ? $options['m'] : null;
 $tablePosDif   = isset($options['t']) ? $options['t'] : 3;
 $tableDistance = isset($options['d']) ? $options['d'] : 5;
 
-$table  = new Table('bl1', $seasonCode);
-$player = new Player('bl1', $seasonCode);
+$table  = new Table($leagueCode, $seasonCode);
+$player = new Player($leagueCode, $seasonCode);
 
 //var_dump($table->getRawGameData());
 
