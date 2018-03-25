@@ -31,11 +31,9 @@ class Table {
 
             foreach ($results as $result) {
                 $data = $this->getMatchRawData($table, $matchday, $result['home_team_id'], $result['away_team_id'], $players);
-
-                $matchData[] = array_merge(array_values($data),
-                [
-                    ($result['home_score'] - $result['away_score'])
-                ]);
+                $data['data']['score']  = $result['home_score'] - $result['away_score'];
+                $data['data']['offset'] = min($result['home_score'], $result['away_score']);
+                $matchData[]            = $data;
             }
         }
 
@@ -43,32 +41,47 @@ class Table {
     }
 
     public function getMatchRawData($table, $matchday, $homeId, $awayId, $players) {
-        $data     = [];
-        $position = false;
+        $data    = [
+            'positions' => [
+                $homeId => 0,
+                $awayId => 0
+            ],
+            'points' => [
+                $homeId => 0,
+                $awayId => 0
+            ],
+            'data' => []
+        ];
+        $posDiff = false;
 
-        foreach ([$homeId, $awayId] as $teamId) {
-            $position = $position === false
-                      ? (int)$this->getTeamPosition($teamId, $table)
-                      : $position - (int)$this->getTeamPosition($teamId, $table);
+        foreach (['home' => $homeId, 'away' => $awayId] as $team => $teamId) {
+            $position = (int)$this->getTeamPosition($teamId, $table);
+            $posDiff  = $posDiff === false
+                      ? $position
+                      : $posDiff - $position;
 
             $topscorer = isset($players[$teamId]) ? $players[$teamId] : [];
             $teamData  = $table[$teamId];
 
-            $data[$teamId . '_mgw'] = $teamData['games'] ? $teamData['won'] / $teamData['games'] : 0;
-            $data[$teamId . '_mgd'] = $teamData['games'] ? $teamData['draw'] / $teamData['games'] : 0;
-            $data[$teamId . '_mgl'] = $teamData['games'] ? $teamData['lost'] / $teamData['games'] : 0;
+            $data['data'][$teamId . '_mgw'] = $teamData['games'] ? $teamData['won'] / $teamData['games'] : 0;
+            $data['data'][$teamId . '_mgl'] = $teamData['games'] ? $teamData['lost'] / $teamData['games'] : 0;
 
-            $data[$teamId . '_mgs'] = $teamData['games'] ? $teamData['goals_scored'] / $teamData['games'] : 0;
-            $data[$teamId . '_mgt'] = $teamData['games'] ? $teamData['goals_taken'] / $teamData['games'] : 0;
-            $data[$teamId . '_ppg'] = $teamData['games'] ? $teamData['points'] / $teamData['games'] : 0;
-            $data[$teamId . '_str'] = (int)$this->getWonGames($teamId, $matchday - 1, 10);
+            $data['data'][$teamId . '_otp'] = 0;
 
-            $data[$teamId . '_tsg'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'goals')) / $teamData['games'] : 0;
-            $data[$teamId . '_tss'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'streak')) / $teamData['games']: 0;
+            $data['data'][$teamId . '_mgs'] = $teamData['games'] ? $teamData['goals_scored'] / $teamData['games'] : 0;
+            $data['data'][$teamId . '_mgt'] = $teamData['games'] ? $teamData['goals_taken'] / $teamData['games'] : 0;
+            $data['data'][$teamId . '_ppg'] = $teamData['games'] ? $teamData['points'] / $teamData['games'] : 0;
+            $data['data'][$teamId . '_str'] = (int)$this->getWonGames($teamId, $matchday - 1, 10);
+
+            $data['data'][$teamId . '_tsg'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'goals')) / $teamData['games'] : 0;
+            $data['data'][$teamId . '_tss'] = $topscorer && $teamData['games'] ? array_sum(array_column($topscorer, 'streak')) / $teamData['games']: 0;
+
+            $data['positions'][$teamId] = $position;
+            $data['points'][$teamId] = $teamData['points'];
         }
 
-        $data['pos_diff'] = $position;
-        $data['matchday'] = $matchday;
+        $data['data']['pos_diff'] = $position;
+        $data['data']['matchday'] = $matchday;
 
         return $data;
     }

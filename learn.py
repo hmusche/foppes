@@ -5,42 +5,39 @@ import pandas
 import numpy
 
 from sklearn import model_selection
-from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import accuracy_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import SVC
 
-names = ['hmgw', 'hmgd', 'hmgl', 'hmgs', 'hmgt', 'hstr', 'hppg', 'htsg', 'htss', 'amgw', 'amgd', 'amgl', 'amgs', 'amgt', 'astr', 'appg', 'atsg', 'atss', 'posdiff', 'md', 'res']
+names = ['hmgw', 'hmgd', 'hmgl', 'hmgs', 'hmgt', 'hstr', 'hppg', 'htsg', 'htss', 'amgw', 'amgd', 'amgl', 'amgs', 'amgt', 'astr', 'appg', 'atsg', 'atss', 'posdiff', 'md', 'res', 'off']
 
 dataset = pandas.read_csv('data.csv', names=names)
 data_array = dataset.values
 
-input = data_array[:,0:19]
-goals = data_array[:,20]
+input  = data_array[:,0:19]
+result = data_array[:,20]
+offset = data_array[:,21]
 
 seed = 7
 validation_size = 0.2
-scoring = 'accuracy'
-input_train, input_validation, train, validation = model_selection.train_test_split(input, goals, test_size=validation_size, random_state=seed)
+
+input_train, input_validation, result_train, validation = model_selection.train_test_split(input, result, test_size=validation_size, random_state=seed)
+input_train, input_validation, offset_train, validation = model_selection.train_test_split(input, offset, test_size=validation_size, random_state=seed)
 
 
 
 
-lda = LinearDiscriminantAnalysis()
-lda.fit(input_train, train)
+reslda = LinearDiscriminantAnalysis()
+reslda.fit(input_train, result_train)
+
+offlda = LinearDiscriminantAnalysis()
+offlda.fit(input_train, offset_train)
 
 bet_dataset = pandas.read_csv('validation.csv', names=names)
 bet_array = bet_dataset.values
 data = bet_array[:,0:19]
 
-bets = lda.predict(data);
+resultBets = reslda.predict(data);
+offsetBets = offlda.predict(data);
 
+results = numpy.column_stack((resultBets, offsetBets))
 
-results = numpy.column_stack((bets))
-
-numpy.savetxt("results.txt", results.astype(int), fmt='%i', delimiter=",")
+numpy.savetxt("results.csv", results.astype(int), fmt='%i', delimiter=",")
