@@ -31,8 +31,37 @@ switch (true) {
         break;
     case isset($options['m']):
         $day    = 0;
-        $league = $db->fetch('league', ['shortname' => $leagueCode]);
-        $season = $db->fetch('season', ['shortname' => $seasonCode]);
+
+        preg_match('/([a-z]+)([0-9]+)/', $leagueCode, $match);
+
+        if (isset($match[1])) {
+            switch ($match[1]) {
+                case 'bl':
+                    $leagueName = 'Bundesliga';
+                    break;
+                default:
+                    throw new Exception('unknown league id');
+            }
+
+            if (isset($match[2])) {
+                $leagueName = $match[2] . '. ' . $leagueName;
+            }
+        } else {
+            throw new Exception('unknown league code');
+        }
+
+        $leagueId = $db->upsert('league', [
+            'shortname' => $leagueCode,
+            'name'      => $leagueName
+        ], ['shortname' => $leagueCode]);
+
+        $seasonName = $seasonCode . '/' . ($seasonCode + 1);
+
+        $seasonId = $db->upsert('season', [
+            'shortname' => $seasonCode,
+            'name'      => $seasonName
+        ], ['shortname' => $seasonCode]);
+
         $teams  = new Teams($db);
         $extMap = $teams->getExtMap();
 
@@ -40,8 +69,8 @@ switch (true) {
             $day++;
             $matchday = [
                 'count'     => $day,
-                'league_id' => $league['id'],
-                'season_id' => $season['id'],
+                'league_id' => $leagueId,
+                'season_id' => $seasonId,
                 'start'     => 0,
                 'end'       => 0
             ];
@@ -54,8 +83,8 @@ switch (true) {
 
             $matchdayId = $db->upsert('matchday', $matchday, [
                 'count'     => $day,
-                'league_id' => $league['id'],
-                'season_id' => $season['id']
+                'league_id' => $leagueId,
+                'season_id' => $seasonId
             ]);
 
             $matchday = [
@@ -105,14 +134,15 @@ switch (true) {
                 ];
 
                 foreach ($matchData['MatchResults'] as $result) {
-                    if ($result['ResultTypeID'] == 1) {
+                    if ($result['ResultTypeID'] == 1 || $result['ResultName'] == "Halbzeitergebnis") {
                         $results['halftime']['home_score'] = $result['PointsTeam1'];
                         $results['halftime']['away_score'] = $result['PointsTeam2'];
 
-                    } elseif ($result['ResultTypeID'] == 2) {
+                    } elseif ($result['ResultTypeID'] == 2 || $result['ResultName'] == "Endergebnis") {
                         $results['fulltime']['home_score'] = $result['PointsTeam1'];
                         $results['fulltime']['away_score'] = $result['PointsTeam2'];
                     }
+
                 }
 
                 foreach ($results as $type => $result) {
@@ -165,8 +195,8 @@ switch (true) {
                     $teamPlayer = [
                         'player_id' => $playerId,
                         'team_id'   => $playerTeamId,
-                        'league_id' => $league['id'],
-                        'season_id' => $season['id']
+                        'league_id' => $leagueId,
+                        'season_id' => $seasonId
                     ];
 
                     $teamPlayerId = $db->upsert('team_player', $teamPlayer, $teamPlayer);
